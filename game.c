@@ -26,11 +26,30 @@ Different modes
 
 static uint8_t	mode =	 I2C_MODE_MASTER;
 
+static void	init_master()
+{
+										
+	i2c_init(100000, 0, I2C_MODE_MASTER_TX); //Init TWI interface enabling general call recognition
+					//    and master mode (not pulling TWEA at beginning)
+	TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
+
+	while (!I2C_READY);
+
+	if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
+		LOGI("Start condition could not be sent");
+
+	LOGD("Start condition was sent !");
+
+	TWDR = 0; //Set address of receiver and mode
+	TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
+
+}
+
 void	initGame(void)
 {
-	// i2c_init(100000, I2C_ENABLE_GC, I2C_MODE_SLAVE_RX); //Init TWI interface enabling general call recognition
-										//    and master mode (not pulling TWEA at beginning)
-	// i2c_start(0x00, I2C_MODE_TX); //Try general call as master TX
+	init_master();
+	// i2c_init(100000, 0, I2C_MODE_MASTER_TX); //Init TWI interface enabling general call recognition
+	// 									//    and master mode (not pulling TWEA at beginning)
 
 	// TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
 
@@ -41,22 +60,26 @@ void	initGame(void)
 
 	// LOGD("Start condition was sent !");
 
-	// TWDR = 0x00 | mode; //Set address of receiver and mode
-	TWAR = 0b00000001;
-	TWBR = 72;
-	TWCR = (1 << TWEA) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
+	// TWDR = 0; //Set address of receiver and mode
+	// // TWAR = 0b00000001;
+	// // TWBR = 72;
+	// TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
 
-	// TWCR |= (1 << TWEN); //Enable TWI interface
-	// TWCR |= ((mode & (1 << I2C_MODE_RX)) << TWEA); //In receiver mode, TWEA is pulled to HIGH
+	// // TWCR |= (1 << TWEN); //Enable TWI interface
+	// // TWCR |= ((mode & (1 << I2C_MODE_RX)) << TWEA); //In receiver mode, TWEA is pulled to HIGH
 
 	while (!I2C_READY);
 	detectMode(); //check status of i2c_start
 	if (mode == I2C_MODE_MASTER)
+	{
 		LOGI("Master mode");
+		MasterMode();
+	}
 	else
 	{
 		// TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
 		LOGI("Slave mode");
+		slaveRoutine();
 	}
 	
 }
@@ -133,7 +156,7 @@ void	MasterMode(void)
 	while (1)
 	{
 		i2c_write(1);
-		if (TW_STATUS == TW_MT_SLA_NACK)
+		if (TW_STATUS == TW_MT_DATA_NACK)
 		{
 			lose();
 			i2c_write(0);
