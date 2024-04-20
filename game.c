@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/20 15:48:45 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 18:16:11 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 18:22:23 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,10 +79,8 @@ void	detectMode(void)
 		//No one answered to the given address
 		//Means that you are master
 		case TW_MT_SLA_NACK: 
-			LOGI("Device entering master mode ?");
+			LOGI("Device entering slave mode ?");
 			mode = I2C_MODE_MASTER;
-			TWCR = (1 << TWINT) | (1 << TWEN);
-			TWCR &= ~(1 <<TWEA); 
 			break;
 
 		//Another master took control of the line. SHould not happen (because general call should be answered)
