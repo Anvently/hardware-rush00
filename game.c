@@ -162,15 +162,16 @@ void	MasterMode(void)
 	i2c_stop();
 }
 
+void	readButtons(void);
+
 void	slaveRoutine(void)
 {
 	while (1)
 	{
-		uint8_t stop = isPressed;
-	
+		readButtons();
 		uint8_t	data = 0;
-		i2c_read(&data, stop);
-		if (stop)
+		i2c_read(&data, isPressed);
+		if (isPressed)
 		{
 			win();
 			break;
