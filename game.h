@@ -1,27 +1,25 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
+/*   game.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/04/15 10:21:08 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 17:20:18 by npirard          ###   ########.fr       */
+/*   Created: 2024/04/19 17:07:56 by npirard           #+#    #+#             */
+/*   Updated: 2024/04/20 17:20:11 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef LOG_LVL
- #define LOG_LVL LOG_ERROR
-#endif
+#ifndef GAME_H
+# define GAME_H
 
-#include <avr/io.h>
-#include <util/delay.h>
 #include <avr/interrupt.h>
-#include <log.h>
+#include <avr/io.h>
+#include <error_led.h>
 #include <uart.h>
+#include <log.h>
 #include <i2c.h>
-#include <stdlib.h>
-#include <game.h>
+#include <error_led.h>
 
 #ifndef CPU_FREQ
  #define CPU_FREQ 16000000
@@ -35,16 +33,16 @@
  #define FALSE 0
 #endif
 
-#ifndef HEXCODE
- #define HEXCODE "0123456789ABCDEF"
+#define LOG_DISABLE 0
+#define LOG_ERROR 1
+#define LOG_INFO 2
+#define LOG_DEBUG 3
+
+#ifndef LOG_LVL
+	#define LOG_LVL LOG_INFO
 #endif
 
-int	main(void)
-{
+void	initGame(void);
+void	detectMode(void);
 
-	LOGI("Starting");
-	initGame();
-	// detectMode();
-
-	while (1);
-}
+#endif

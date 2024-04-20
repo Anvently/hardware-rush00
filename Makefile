@@ -4,7 +4,7 @@ INCLUDES	=	./
 SRCS_FOLDER	=	./
 OBJS_FOLDER	=	.objs/
 
-SRCS_FILES	=	main.c uart.c i2c.c log.c error_led.c
+SRCS_FILES	=	main.c uart.c i2c.c log.c error_led.c game.c
 
 SRCS		=	$(addprefix $(SRCS_FOLDER),$(SRCS_FILES))
 OBJS		=	$(addprefix $(OBJS_FOLDER),$(SRCS_FILES:.c=.o))

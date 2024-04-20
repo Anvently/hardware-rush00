@@ -6,15 +6,11 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/20 15:48:45 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 16:58:01 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 17:20:06 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <i2c.h>
-#include <log.h>
-#include <error_led.h>
+#include <game.h>
 
 /*
 
@@ -40,12 +36,16 @@ Different modes
 
 static uint8_t	mode =	 I2C_MODE_MASTER;
 
-void	init(void)
+void	initGame(void)
 {
 	i2c_init(100000, I2C_ENABLE_GC, mode); //Init TWI interface enabling general call recognition
 										   // and master mode (not pulling TWEA at beginning)
 	i2c_start(0x00, I2C_MODE_TX); //Try general call as master TX
 	detectMode(); //check status of i2c_start
+	if (mode == I2C_MODE_MASTER)
+		LOGI("Master mode");
+	else
+		LOGI("Slave mode");
 }
 
 void	detectMode(void)
@@ -66,7 +66,7 @@ void	detectMode(void)
 			mode = I2C_MODE_SLAVE; 
 			break;
 
-		//Another master took control of the line
+		//Another master took control of the line. SHould not happen (because general call should be answered)
 		case TW_MR_ARB_LOST:
 			LOGD("Arbitration lost. Device entering slave mode.");
 			mode = I2C_MODE_SLAVE; 
@@ -86,7 +86,9 @@ void	detectMode(void)
 		case TW_SR_GCALL_DATA_ACK:
 			break;
 
-		//Slave received 
+		//Slave received data when addressed in general call, but returned NACK
+		//Means that the slave cleared TWEA flag in the previous read beacause he won
+		//So not supposed to happen
 		case TW_SR_GCALL_DATA_NACK:
 			break;
 

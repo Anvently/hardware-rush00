@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/19 16:22:47 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 16:33:13 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 17:20:39 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,7 +80,7 @@ int8_t	i2c_start(uint8_t address, uint8_t mode)
 			break;
 
 		default:
-			return (LOGE("Unknown status code"), I2C_ERROR_UNLIKELY);
+			LOGE("Unknown status code");
 	}
 	return (0);
 }
