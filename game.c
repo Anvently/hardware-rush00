@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/20 15:48:45 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 18:03:59 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 18:16:11 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,15 +52,18 @@ void	initGame(void)
 	LOGD("Start condition was sent !");
 
 	TWDR = 0x00 | mode; //Set address of receiver and mode
-	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA); //Set the interrupt flag to send content of TWDR buffer
+	TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
 
 	while (!I2C_READY);
-
 	detectMode(); //check status of i2c_start
 	if (mode == I2C_MODE_MASTER)
 		LOGI("Master mode");
 	else
+	{
+		// TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
 		LOGI("Slave mode");
+	}
+	detectMode();
 }
 
 void	detectMode(void)
@@ -76,8 +79,10 @@ void	detectMode(void)
 		//No one answered to the given address
 		//Means that you are master
 		case TW_MT_SLA_NACK: 
-			LOGI("Device entering slave mode");
-			mode = I2C_MODE_SLAVE; 
+			LOGI("Device entering master mode ?");
+			mode = I2C_MODE_MASTER;
+			TWCR = (1 << TWINT) | (1 << TWEN);
+			TWCR &= ~(1 <<TWEA); 
 			break;
 
 		//Another master took control of the line. SHould not happen (because general call should be answered)
