@@ -129,6 +129,22 @@ int8_t	i2c_read(uint8_t* dest, uint8_t stop)
 		case TW_MR_ARB_LOST:
 			LOGD("Arbitration lost !!");
 			break;
+
+		case TW_SR_GCALL_DATA_ACK:
+			LOGD("Data from GCALL received and ACK returned");
+			break;
+
+		case TW_SR_GCALL_DATA_NACK:
+			LOGD("Data from GCALL received and NACK returned");
+			break;
+
+		case TW_SR_DATA_ACK:
+			LOGD("Data received and ACK returned");
+			break;
+
+		case TW_SR_DATA_NACK:
+			LOGD("Data received and NACK returned");
+			break;
 		
 		default:
 			return (error(), LOGE("Unknown status code"), I2C_ERROR_UNLIKELY);

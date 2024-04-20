@@ -30,9 +30,12 @@
 	#define LOG_LVL LOG_INFO
 #endif
 
+
+void	initSlave(void);
 void	initGame(void);
 void	detectMode(void);
 void	MasterMode(void);
+void	slaveRoutine(void);
 
 void	win();
 void	lose();
