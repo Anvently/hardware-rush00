@@ -145,6 +145,7 @@ void	MasterMode(void)
 	uint8_t	data = 0;
 	while (1)
 	{
+		readButtons();
 		i2c_write(1);
 		if (TW_STATUS == TW_MT_DATA_NACK)
 		{
@@ -161,8 +162,6 @@ void	MasterMode(void)
 	}
 	i2c_stop();
 }
-
-void	readButtons(void);
 
 void	slaveRoutine(void)
 {
@@ -185,12 +184,39 @@ void	slaveRoutine(void)
 	
 }
 
+
+static void led5Animation(void)
+{
+	DDRD |= (1<<PD3); // bleu
+	DDRD |= (1<<PD5); // rouge
+	DDRD |= (1<<PD6); // vert
+
+	for (int i = 0; i < 15; i++)
+	{
+		PORTD |= (1<<PD3);
+		_delay_ms(80);
+		PORTD |= (1<<PD5);
+		_delay_ms(80);
+		PORTD &= ~(1<<PD3);
+		_delay_ms(80);
+		PORTD |= (1<<PD6);
+		_delay_ms(80);
+		PORTD &= ~(1<<PD5);
+		_delay_ms(80);
+		PORTD &= ~(1<<PD6);
+	}
+}
+
 void	win(void)
 {
 	print("Victory !! :-D", 1);
+	led5Animation();
 }
 
 void	lose(void)
 {
 	print("LOOSER :-(", 1);
+	DDRD |= (1<<PD5); // rouge
+	PORTD |= (1<<PD5);
 }
+

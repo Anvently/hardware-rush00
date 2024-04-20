@@ -8,6 +8,7 @@
 #include <log.h>
 #include <i2c.h>
 #include <error_led.h>
+#include <util/delay.h>
 
 #ifndef CPU_FREQ
  #define CPU_FREQ 16000000
@@ -36,6 +37,7 @@ void	initGame(void);
 void	detectMode(void);
 void	MasterMode(void);
 void	slaveRoutine(void);
+void	readButtons(void);
 
 void	win();
 void	lose();

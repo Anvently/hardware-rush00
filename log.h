@@ -5,6 +5,7 @@
 #include <avr/io.h>
 #include <error_led.h>
 #include <uart.h>
+#include <util/delay.h>
 
 #ifndef CPU_FREQ
  #define CPU_FREQ 16000000

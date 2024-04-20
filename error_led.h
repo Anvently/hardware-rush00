@@ -3,6 +3,7 @@
 
 #include <avr/interrupt.h>
 #include <avr/io.h>
+#include <util/delay.h>
 
 #ifndef CPU_FREQ
  #define CPU_FREQ 16000000
