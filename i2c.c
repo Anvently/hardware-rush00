@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/19 16:22:47 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 16:16:45 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 16:33:13 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,6 @@ int8_t	i2c_start(uint8_t address, uint8_t mode)
 		//Device took the line
 		case TW_MT_SLA_ACK:
 			LOGD("SLA ACK received from slave device");
-			lvlMode = I2C_MODE_MASTER;
 			break;
 
 		//No one answered to the given address
@@ -62,7 +61,6 @@ int8_t	i2c_start(uint8_t address, uint8_t mode)
 		//Because address doesn't exist or someone (a master ?) is pulling the SDA LOW
 		case TW_MT_SLA_NACK: 
 			LOGD("SLA NACK received from slave device !!");
-			lvlMode = I2C_MODE_SLAVE; 
 			break;
 
 		//Another master took control of the line

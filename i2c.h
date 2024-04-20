@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/19 10:29:23 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 13:18:09 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 16:32:02 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,8 +53,7 @@
 #define I2C_READY (TWCR & (1 << TWINT))
 
 int8_t	i2c_init(uint32_t frequency, uint8_t address, uint8_t mode);
-int8_t	i2c_start_MT(uint8_t address);
-int8_t	i2c_start_MR(uint8_t address);
+int8_t	i2c_start(uint8_t address, uint8_t mode);
 int8_t	i2c_stop(void);
 int8_t	i2c_write(uint8_t data);
 int8_t	i2c_read(uint8_t* dest, uint8_t stop);
