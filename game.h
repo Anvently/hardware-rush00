@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   game.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
+/*   By: lduheron <lduheron@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/19 17:07:56 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 17:20:11 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 18:49:02 by lduheron         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,5 +44,7 @@
 
 void	initGame(void);
 void	detectMode(void);
+void	MasterMode(void);
+
 
 #endif
