@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/20 15:48:45 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 17:20:06 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 18:03:59 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,22 @@ void	initGame(void)
 {
 	i2c_init(100000, I2C_ENABLE_GC, mode); //Init TWI interface enabling general call recognition
 										   // and master mode (not pulling TWEA at beginning)
-	i2c_start(0x00, I2C_MODE_TX); //Try general call as master TX
+	// i2c_start(0x00, I2C_MODE_TX); //Try general call as master TX
+
+	TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
+
+	while (!I2C_READY);
+
+	if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
+		LOGI("Start condition could not be sent");
+
+	LOGD("Start condition was sent !");
+
+	TWDR = 0x00 | mode; //Set address of receiver and mode
+	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA); //Set the interrupt flag to send content of TWDR buffer
+
+	while (!I2C_READY);
+
 	detectMode(); //check status of i2c_start
 	if (mode == I2C_MODE_MASTER)
 		LOGI("Master mode");
@@ -59,54 +74,55 @@ void	detectMode(void)
 			break;
 
 		//No one answered to the given address
-		//It should mean that there is another master in control
-		//Because address doesn't exist or someone (a master ?) is pulling the SDA LOW
+		//Means that you are master
 		case TW_MT_SLA_NACK: 
-			LOGD("Device entering slave mode");
+			LOGI("Device entering slave mode");
 			mode = I2C_MODE_SLAVE; 
 			break;
 
 		//Another master took control of the line. SHould not happen (because general call should be answered)
 		case TW_MR_ARB_LOST:
-			LOGD("Arbitration lost. Device entering slave mode.");
+			LOGI("Arbitration lost. Device entering slave mode.");
 			mode = I2C_MODE_SLAVE; 
 			break;
 
 		//Lost arbitration and addressed by general call => slave mode 
 		case TW_SR_ARB_LOST_GCALL_ACK:
-			LOGD("Arbitration lost and general call answered. Device entering slave mode.");
+			LOGI("Arbitration lost and general call answered. Device entering slave mode.");
 			mode = I2C_MODE_SLAVE; 
 			break;
 
 		//Slave answered acknowledge to general call (not supposed to happen)
 		case TW_SR_GCALL_ACK:
+			LOGI("Slave answered general call");
 			break;
 
 		//Slave received data and returned acknowledge => game is still running
 		case TW_SR_GCALL_DATA_ACK:
+			LOGI("Slave ACK data received");
 			break;
 
 		//Slave received data when addressed in general call, but returned NACK
 		//Means that the slave cleared TWEA flag in the previous read beacause he won
 		//So not supposed to happen
 		case TW_SR_GCALL_DATA_NACK:
+			LOGI("Slave NACK data received");
 			break;
 
 
 		// //Slave device is ready to send data
 		// case TW_MR_SLA_ACK:
-		// 	LOGD("SLA ACK received from slave device");
+		// 	LOGI("SLA ACK received from slave device");
 		// 	break;
 
 		// //No one answered to the given adress
 		// //It should mean there is another master in control
 		// case TW_MR_SLA_NACK:
-		// 	LOGD("SLA NACK received from slave device !!");
+		// 	LOGI("SLA NACK received from slave device !!");
 		// 	break;
 
 		default:
 			print("Unknown status code: ", 0);
 			printHexa(TW_STATUS);
-			return (I2C_ERROR_UNLIKELY);
 	}
 }

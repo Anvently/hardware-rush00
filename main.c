@@ -6,12 +6,12 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/15 10:21:08 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 17:20:18 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 17:41:53 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef LOG_LVL
- #define LOG_LVL LOG_ERROR
+ #define LOG_LVL LOG_INFO
 #endif
 
 #include <avr/io.h>
