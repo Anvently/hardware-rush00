@@ -6,11 +6,13 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/20 15:48:45 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 18:22:23 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 18:46:06 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <game.h>
+
+extern volatile uint8_t	isPressed;
 
 /*
 
@@ -38,21 +40,26 @@ static uint8_t	mode =	 I2C_MODE_MASTER;
 
 void	initGame(void)
 {
-	i2c_init(100000, I2C_ENABLE_GC, mode); //Init TWI interface enabling general call recognition
-										   // and master mode (not pulling TWEA at beginning)
+	// i2c_init(100000, I2C_ENABLE_GC, I2C_MODE_SLAVE_RX); //Init TWI interface enabling general call recognition
+										//    and master mode (not pulling TWEA at beginning)
 	// i2c_start(0x00, I2C_MODE_TX); //Try general call as master TX
 
-	TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
+	// TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
 
-	while (!I2C_READY);
+	// while (!I2C_READY);
 
-	if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
-		LOGI("Start condition could not be sent");
+	// if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
+	// 	LOGI("Start condition could not be sent");
 
-	LOGD("Start condition was sent !");
+	// LOGD("Start condition was sent !");
 
-	TWDR = 0x00 | mode; //Set address of receiver and mode
-	TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
+	// TWDR = 0x00 | mode; //Set address of receiver and mode
+	TWAR = 0b00000001;
+	TWBR = 72;
+	TWCR = (1 << TWEA) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
+
+	// TWCR |= (1 << TWEN); //Enable TWI interface
+	// TWCR |= ((mode & (1 << I2C_MODE_RX)) << TWEA); //In receiver mode, TWEA is pulled to HIGH
 
 	while (!I2C_READY);
 	detectMode(); //check status of i2c_start
@@ -63,7 +70,7 @@ void	initGame(void)
 		// TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
 		LOGI("Slave mode");
 	}
-	detectMode();
+	
 }
 
 void	detectMode(void)
@@ -80,7 +87,7 @@ void	detectMode(void)
 		//Means that you are master
 		case TW_MT_SLA_NACK: 
 			LOGI("Device entering slave mode ?");
-			mode = I2C_MODE_MASTER;
+			mode = I2C_MODE_SLAVE;
 			break;
 
 		//Another master took control of the line. SHould not happen (because general call should be answered)
@@ -98,6 +105,7 @@ void	detectMode(void)
 		//Slave answered acknowledge to general call (not supposed to happen)
 		case TW_SR_GCALL_ACK:
 			LOGI("Slave answered general call");
+			mode = I2C_MODE_SLAVE;
 			break;
 
 		//Slave received data and returned acknowledge => game is still running
@@ -128,4 +136,27 @@ void	detectMode(void)
 			print("Unknown status code: ", 0);
 			printHexa(TW_STATUS);
 	}
+}
+
+void	slaveRoutine(void)
+{
+	while (1)
+	{
+		uint8_t	data = 0;
+		i2c_read(&data, isPressed);
+
+		if (data == 0)
+			lose();
+	}
+	
+}
+
+void	win(void)
+{
+	print("Victory !! :-D", 1);
+}
+
+void	lose(void)
+{
+	print("LOOSER :-(", 1);
 }

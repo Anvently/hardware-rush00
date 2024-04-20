@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/19 17:16:06 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 13:14:59 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 18:48:52 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,11 +29,6 @@ uint8_t	error(void)
 	return (1);
 }
 
-ISR (TIMER1_COMPA_vect) //triggered every 2s
-{
-	PORTB &= ~(1 << PB0); //Reset error led
-}
-
 void	init(void)
 {
 	DDRB |= (1 << DDD0); //set led 0 to output
@@ -42,17 +37,17 @@ void	init(void)
 	// We want 0.5Hz
 	//		=> with prescaler =  64, OCR1A = 62500
 
-	//Mode to 11
-	TCCR1A |= (1 << WGM11) | (1 << WGM10);
-	TCCR1B |= (1 << WGM13);
+	// //Mode to 11
+	// TCCR1A |= (1 << WGM11) | (1 << WGM10);
+	// TCCR1B |= (1 << WGM13);
 
-	TCCR1B |= (1 << CS12); //prescaler to 256
+	// TCCR1B |= (1 << CS12); //prescaler to 256
 
-	TIMSK1 |= (1 << OCIE1A); //Enable OCR1A match compare interrupt
+	// TIMSK1 |= (1 << OCIE1A); //Enable OCR1A match compare interrupt
 
-	OCR1A = 62500;
+	// OCR1A = 62500;
 
-	sei();
+	// sei();
 }
 
 #endif
