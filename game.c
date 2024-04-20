@@ -48,25 +48,6 @@ static void	init_master()
 void	initGame(void)
 {
 	init_master();
-	// i2c_init(100000, 0, I2C_MODE_MASTER_TX); //Init TWI interface enabling general call recognition
-	// 									//    and master mode (not pulling TWEA at beginning)
-
-	// TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
-
-	// while (!I2C_READY);
-
-	// if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
-	// 	LOGI("Start condition could not be sent");
-
-	// LOGD("Start condition was sent !");
-
-	// TWDR = 0; //Set address of receiver and mode
-	// // TWAR = 0b00000001;
-	// // TWBR = 72;
-	// TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
-
-	// // TWCR |= (1 << TWEN); //Enable TWI interface
-	// // TWCR |= ((mode & (1 << I2C_MODE_RX)) << TWEA); //In receiver mode, TWEA is pulled to HIGH
 
 	while (!I2C_READY);
 	detectMode(); //check status of i2c_start
