@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/19 16:22:47 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 13:14:57 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 16:16:45 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ int8_t	i2c_init(uint32_t frequency, uint8_t address, uint8_t mode)
 	return (0);
 }
 
-int8_t	i2c_start_MT(uint8_t address)
+int8_t	i2c_start(uint8_t address, uint8_t mode)
 {
 	TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
 
@@ -44,67 +44,46 @@ int8_t	i2c_start_MT(uint8_t address)
 
 	LOGD("Start condition was sent !");
 
-	TWDR = (address << 1); //Set address of receiver and write mode
+	TWDR = (address << 1) | mode; //Set address of receiver and mode
 	TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
 
 	while (!I2C_READY);
 
-	switch (TWSR & 0b11111000)
+	switch (TW_STATUS)
 	{
+		//Device took the line
 		case TW_MT_SLA_ACK:
 			LOGD("SLA ACK received from slave device");
+			lvlMode = I2C_MODE_MASTER;
 			break;
 
-		case TW_MT_SLA_NACK:
+		//No one answered to the given address
+		//It should mean that there is another master in control
+		//Because address doesn't exist or someone (a master ?) is pulling the SDA LOW
+		case TW_MT_SLA_NACK: 
 			LOGD("SLA NACK received from slave device !!");
+			lvlMode = I2C_MODE_SLAVE; 
 			break;
 
-		case TW_MT_ARB_LOST:
+		//Another master took control of the line
+		case TW_MR_ARB_LOST:
 			LOGD("Arbitration lost !!");
 			break;
-		
-		default:
 
-			return (LOGE("Unknown status code"), I2C_ERROR_UNLIKELY);
-	}
-	return (0);
-}
-
-int8_t	i2c_start_MR(uint8_t address)
-{
-	TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
-
-	while (!I2C_READY);
-
-	if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
-		return (LOGI("Start condition could not be sent"), I2C_ERROR_UNLIKELY);
-
-	LOGD("Start condition was sent !");
-
-	TWDR = (address << 1) | TW_READ; //Set address of receiver and write mode
-	TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
-
-	while (!I2C_READY);
-
-	switch (TWSR & 0b11111000)
-	{
-		
+		//Slave device is ready to send data
 		case TW_MR_SLA_ACK:
 			LOGD("SLA ACK received from slave device");
 			break;
 
+		//No one answered to the given adress
+		//It should mean there is another master in control
 		case TW_MR_SLA_NACK:
 			LOGD("SLA NACK received from slave device !!");
 			break;
 
-		case TW_MR_ARB_LOST:
-			LOGD("Arbitration lost !!");
-			break;
-		
 		default:
 			return (LOGE("Unknown status code"), I2C_ERROR_UNLIKELY);
 	}
-	// TWCR = (1 << TWEA) | (1 << TWINT) | (1 << TWEN);
 	return (0);
 }
 
