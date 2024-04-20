@@ -26,7 +26,58 @@ Different modes
 
 static uint8_t	mode =	 I2C_MODE_MASTER;
 
-static void	init_master()
+void	initGame(void)
+{
+	initSlave();
+	setRole(); 
+	// while (!I2C_READY);
+	// detectMode(); //check status of i2c_start
+
+	if (mode == I2C_MODE_MASTER)
+	{
+		LOGI("Master mode");
+		initMaster();
+		countdown();
+		masterRoutine();
+	}
+	else
+	{
+		// TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
+		LOGI("Slave mode");
+		initSlave();
+		countdown();
+		slaveRoutine();
+	}
+}
+
+///////////////////////////////////////////////////////////////////
+// ALL SLAVES
+
+// set board as master or slave
+void	setRole(void)
+{
+	// Wait for general call if slave
+	// Wait for button Pressed if master
+	while (1)
+	{
+		readButtons();
+		if (isPressed)
+		{
+			mode = I2C_MODE_MASTER;
+			break;
+		}
+		else if (//general call)
+		{
+			mode = I2C_MODE_SLAVE;
+			break;
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////
+// Wait for everybody ready
+
+void	initMaster(void)
 {
 										
 	i2c_init(100000, 0, I2C_MODE_MASTER_TX); //Init TWI interface enabling general call recognition
@@ -43,6 +94,20 @@ static void	init_master()
 	TWDR = 0; //Set address of receiver and mode
 	TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
 
+
+	uint8_t	data = 0;
+	while (1)
+	{
+		readButtons();
+		i2c_write(1);
+		if (TW_STATUS == TW_MT_DATA_ACK)
+		{
+			LOGI("All slaves are ready");
+			i2c_write(2);
+			break ; 
+		}
+	}
+	i2c_stop();
 }
 
 void	initSlave(void)
@@ -50,97 +115,28 @@ void	initSlave(void)
 	TWAR = 0b00000001; //enable response to general call
 	TWBR = 72;
 	TWCR = (1 << TWEA) | (1 << TWEN); //Enable interface and set TWEA to high
+
+	while (1)
+	{
+		readButtons();
+		uint8_t	data = 0;
+		i2c_read(&data, isPressed);
+		if (isPressed)
+		{
+			i2c_write(ACK);
+			break;
+		}
+		if (data == 2)
+			break;
+		i2c_write(NACK);
+	}
+	i2c_stop(); // parce que j'ecris ? 
 }
 
-void	initGame(void)
-{
-	initSlave();
-	while (!I2C_READY);
-	detectMode(); //check status of i2c_start
-	if (mode == I2C_MODE_MASTER)
-	{
-	{
-		LOGI("Master mode");
-		MasterMode();
-	}
-		MasterMode();
-	}
-	else
-	{
-		// TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
-		LOGI("Slave mode");
-		slaveRoutine();
-	}
-	
-}
+///////////////////////////////////////////////////////////////////
+// ROUTINES
 
-void	detectMode(void)
-{
-	switch (TW_STATUS)
-	{
-		//Device took the line
-		case TW_MT_SLA_ACK:
-			LOGI("Another master detected. Device is now entering master mode");
-			mode = I2C_MODE_MASTER;
-			break;
-
-		//No one answered to the given address
-		//Means that you are master
-		case TW_MT_SLA_NACK: 
-			LOGI("Device entering slave mode ?");
-			mode = I2C_MODE_SLAVE;
-			break;
-
-		//Another master took control of the line. SHould not happen (because general call should be answered)
-		case TW_MR_ARB_LOST:
-			LOGI("Arbitration lost. Device entering slave mode.");
-			mode = I2C_MODE_SLAVE; 
-			break;
-
-		//Lost arbitration and addressed by general call => slave mode 
-		case TW_SR_ARB_LOST_GCALL_ACK:
-			LOGI("Arbitration lost and general call answered. Device entering slave mode.");
-			mode = I2C_MODE_SLAVE; 
-			break;
-
-		//Slave answered acknowledge to general call (not supposed to happen)
-		case TW_SR_GCALL_ACK:
-			LOGI("Slave answered general call");
-			mode = I2C_MODE_SLAVE;
-			break;
-
-		//Slave received data and returned acknowledge => game is still running
-		case TW_SR_GCALL_DATA_ACK:
-			LOGI("Slave ACK data received");
-			break;
-
-		//Slave received data when addressed in general call, but returned NACK
-		//Means that the slave cleared TWEA flag in the previous read beacause he won
-		//So not supposed to happen
-		case TW_SR_GCALL_DATA_NACK:
-			LOGI("Slave NACK data received");
-			break;
-
-
-		// //Slave device is ready to send data
-		// case TW_MR_SLA_ACK:
-		// 	LOGI("SLA ACK received from slave device");
-		// 	break;
-
-		// //No one answered to the given adress
-		// //It should mean there is another master in control
-		// case TW_MR_SLA_NACK:
-		// 	LOGI("SLA NACK received from slave device !!");
-		// 	break;
-
-		default:
-			print("Unknown status code: ", 0);
-			printHexa(TW_STATUS);
-	}
-}
-
-
-void	MasterMode(void)
+void	masterRoutine(void)
 {
 	uint8_t	data = 0;
 	while (1)
@@ -181,15 +177,31 @@ void	slaveRoutine(void)
 			break;
 		}
 	}
-	
 }
 
+///////////////////////////////////////////////////////////////////
+// LED
 
-static void led5Animation(void)
+void	countdown(void)
 {
-	DDRD |= (1<<PD3); // bleu
-	DDRD |= (1<<PD5); // rouge
-	DDRD |= (1<<PD6); // vert
+	DDRB |= (1 <<PB0) | (1 <<PB1) | (1 <<PB2) | (1 <<PB4);
+	PORTB |= (1 <<PB0) | (1 <<PB1) | (1 <<PB2) | (1 <<PB4);
+
+	_delay_ms(1000);
+	PORTB &= ~(1 <<PB4);
+	_delay_ms(1000);
+	PORTB &= ~(1 <<PB2);
+	_delay_ms(1000);
+	PORTB &= ~(1 <<PB1);
+	_delay_ms(1000);
+	PORTB &= ~(1 <<PB0);
+}
+
+void	win(void)
+{
+	print("Victory !! :-D", 1);
+
+	DDRD |= (1<<PD3) | (1<<PD5) | (1<<PD6);
 
 	for (int i = 0; i < 15; i++)
 	{
@@ -207,16 +219,79 @@ static void led5Animation(void)
 	}
 }
 
-void	win(void)
-{
-	print("Victory !! :-D", 1);
-	led5Animation();
-}
-
 void	lose(void)
 {
 	print("LOOSER :-(", 1);
-	DDRD |= (1<<PD5); // rouge
+
+	DDRD |= (1<<PD5);
 	PORTD |= (1<<PD5);
+	_delay_ms(6000);
+	
 }
 
+
+
+// void	detectMode(void)
+// {
+// 	switch (TW_STATUS)
+// 	{
+// 		//Device took the line
+// 		case TW_MT_SLA_ACK:
+// 			LOGI("Another master detected. Device is now entering master mode");
+// 			mode = I2C_MODE_MASTER;
+// 			break;
+
+// 		//No one answered to the given address
+// 		//Means that you are master
+// 		case TW_MT_SLA_NACK: 
+// 			LOGI("Device entering slave mode ?");
+// 			mode = I2C_MODE_SLAVE;
+// 			break;
+
+// 		//Another master took control of the line. SHould not happen (because general call should be answered)
+// 		case TW_MR_ARB_LOST:
+// 			LOGI("Arbitration lost. Device entering slave mode.");
+// 			mode = I2C_MODE_SLAVE; 
+// 			break;
+
+// 		//Lost arbitration and addressed by general call => slave mode 
+// 		case TW_SR_ARB_LOST_GCALL_ACK:
+// 			LOGI("Arbitration lost and general call answered. Device entering slave mode.");
+// 			mode = I2C_MODE_SLAVE; 
+// 			break;
+
+// 		//Slave answered acknowledge to general call (not supposed to happen)
+// 		case TW_SR_GCALL_ACK:
+// 			LOGI("Slave answered general call");
+// 			mode = I2C_MODE_SLAVE;
+// 			break;
+
+// 		//Slave received data and returned acknowledge => game is still running
+// 		case TW_SR_GCALL_DATA_ACK:
+// 			LOGI("Slave ACK data received");
+// 			break;
+
+// 		//Slave received data when addressed in general call, but returned NACK
+// 		//Means that the slave cleared TWEA flag in the previous read beacause he won
+// 		//So not supposed to happen
+// 		case TW_SR_GCALL_DATA_NACK:
+// 			LOGI("Slave NACK data received");
+// 			break;
+
+
+// 		// //Slave device is ready to send data
+// 		// case TW_MR_SLA_ACK:
+// 		// 	LOGI("SLA ACK received from slave device");
+// 		// 	break;
+
+// 		// //No one answered to the given adress
+// 		// //It should mean there is another master in control
+// 		// case TW_MR_SLA_NACK:
+// 		// 	LOGI("SLA NACK received from slave device !!");
+// 		// 	break;
+
+// 		default:
+// 			print("Unknown status code: ", 0);
+// 			printHexa(TW_STATUS);
+// 	}
+// }

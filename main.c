@@ -49,11 +49,10 @@ void	readButtons(void)
 
 int	main(void)
 {
-
 	LOGI("Starting");
 	initGame();
 	// detectMode();
 
-	// while (1);m
+	while (1);
 }
 

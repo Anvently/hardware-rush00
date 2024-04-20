@@ -31,18 +31,17 @@
 	#define LOG_LVL LOG_INFO
 #endif
 
-
-void	initSlave(void);
+void	countdown(void);
+void	detectMode(void); ////UNUSED
 void	initGame(void);
-void	detectMode(void);
-void	MasterMode(void);
+void	initMaster(void);
+void	initSlave(void);
+void	lose(void);
+void	masterRoutine(void);
+void	readButtons(void);
+void	setRole(void)
 void	slaveRoutine(void);
-void	readButtons(void);
-
-void	readButtons(void);
-
-void	win();
-void	lose();
+void	win(void);
 
 
 #endif
