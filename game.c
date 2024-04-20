@@ -26,6 +26,25 @@ Different modes
 
 static uint8_t	mode =	 I2C_MODE_MASTER;
 
+static void	init_master()
+{
+										
+	i2c_init(100000, 0, I2C_MODE_MASTER_TX); //Init TWI interface enabling general call recognition
+					//    and master mode (not pulling TWEA at beginning)
+	TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
+
+	while (!I2C_READY);
+
+	if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
+		LOGI("Start condition could not be sent");
+
+	LOGD("Start condition was sent !");
+
+	TWDR = 0; //Set address of receiver and mode
+	TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
+
+}
+
 void	initSlave(void)
 {
 	TWAR = 0b00000001; //enable response to general call
@@ -40,7 +59,10 @@ void	initGame(void)
 	detectMode(); //check status of i2c_start
 	if (mode == I2C_MODE_MASTER)
 	{
+	{
 		LOGI("Master mode");
+		MasterMode();
+	}
 		MasterMode();
 	}
 	else
@@ -124,7 +146,7 @@ void	MasterMode(void)
 	while (1)
 	{
 		i2c_write(1);
-		if (TW_STATUS == TW_MT_SLA_NACK)
+		if (TW_STATUS == TW_MT_DATA_NACK)
 		{
 			lose();
 			i2c_write(0);

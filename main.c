@@ -37,4 +37,5 @@ int	main(void)
 	initGame();
 	// detectMode();
 
+	// while (1);m
 }
