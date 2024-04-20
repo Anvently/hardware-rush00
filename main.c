@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/04/15 10:21:08 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 18:57:38 by npirard          ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef LOG_LVL
  #define LOG_LVL LOG_INFO
 #endif
@@ -39,6 +27,8 @@
  #define HEXCODE "0123456789ABCDEF"
 #endif
 
+volatile uint8_t	isPressed = FALSE;
+
 volatile uint32_t	MILLI_COUNTER = 0;
 volatile uint16_t	LED_TIMER = 0;
 
@@ -64,14 +54,17 @@ ISR (INT0_vect) //Button 1
 		isPressed = TRUE;
 		MILLI_COUNTER = 0; //Reset the counter to 0
 		EICRA = 0b01; //Set the detection mode to toggle to detect button release event
-		displayValue();
 	}
 }
 
-volatile uint8_t	isPressed = FALSE;
-
 int	main(void)
 {
+	/* ------------------------ BUTTON 1 INTERRUPT CONFIG ----------------------- */
+
+	EIMSK |= (1 << INT0);
+
+	EICRA |= (1 << ISC01); //falling edge on INT0 pin will trigger INT0
+
 	//  Timer 1 is set to 1000Hz, every OCR1A match compare will generate an interrupt incrementing MILLI_COUNTER
 
 	OCR1A = 8000; //Set TOP value

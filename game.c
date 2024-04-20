@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   game.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/04/20 15:48:45 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 18:57:22 by npirard          ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include <game.h>
 
 extern volatile uint8_t	isPressed;
@@ -141,19 +129,19 @@ void	detectMode(void)
 
 void	MasterMode(void)
 {
+	uint8_t	data = 0;
 	while (1)
 	{
 		i2c_write(1);
-		i2c_read();
 		if (TW_STATUS == TW_MT_SLA_NACK)
 		{
-			print("Winner : Slave\r\n", 0);
+			lose();
 			i2c_write(0);
 			break ; 
 		}
-		else if (is_pressed)
+		else if (isPressed)
 		{
-			print("Winner : master\r\n", 0);
+			win();
 			i2c_write(0);
 			break ; 
 		}
