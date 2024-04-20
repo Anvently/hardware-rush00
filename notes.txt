@@ -1,0 +1,44 @@
+- ALL slaves
+- while not receive General call || buttonPressed;
+	- if buttonPressed => switch to master
+	- if general call received => stay to slave
+	- start everybody ready part
+
+Wait for everybody ready part :
+
+FOR MASTER
+	initMaster()
+		- WHILE (NACK)
+			send 1
+			if (ACK)
+				send 2
+				break
+		 		go to countdown part
+
+FOR SLAVE
+	- read data while 1
+		- send NACK if button not pressed
+		- send ACK if button pressed
+		- if 2
+			go to countdown part
+
+countdown part :
+
+FOR ALL
+	- blink leds
+	- delay
+
+FOR ALL
+
+game part :
+	FOR MASTER
+		- send 1
+		- expect ACK
+		- if NACK => lose
+			send 0
+	
+	FOR SLAVE
+		- ACK || NACK if button pressed
+		- if 0 => lose
+		- break;
+

@@ -37,6 +37,8 @@ void	detectMode(void);
 void	MasterMode(void);
 void	slaveRoutine(void);
 
+void	readButtons(void);
+
 void	win();
 void	lose();
 
