@@ -6,7 +6,7 @@
 /*   By: npirard <npirard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/20 15:48:45 by npirard           #+#    #+#             */
-/*   Updated: 2024/04/20 16:38:58 by npirard          ###   ########.fr       */
+/*   Updated: 2024/04/20 16:58:01 by npirard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,7 +69,27 @@ void	detectMode(void)
 		//Another master took control of the line
 		case TW_MR_ARB_LOST:
 			LOGD("Arbitration lost. Device entering slave mode.");
+			mode = I2C_MODE_SLAVE; 
 			break;
+
+		//Lost arbitration and addressed by general call => slave mode 
+		case TW_SR_ARB_LOST_GCALL_ACK:
+			LOGD("Arbitration lost and general call answered. Device entering slave mode.");
+			mode = I2C_MODE_SLAVE; 
+			break;
+
+		//Slave answered acknowledge to general call (not supposed to happen)
+		case TW_SR_GCALL_ACK:
+			break;
+
+		//Slave received data and returned acknowledge => game is still running
+		case TW_SR_GCALL_DATA_ACK:
+			break;
+
+		//Slave received 
+		case TW_SR_GCALL_DATA_NACK:
+			break;
+
 
 		// //Slave device is ready to send data
 		// case TW_MR_SLA_ACK:
