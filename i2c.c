@@ -28,7 +28,7 @@ int8_t	i2c_start(uint8_t address, uint8_t mode)
 	while (!I2C_READY);
 
 	if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
-		return (LOGI("Start condition could not be sent"), I2C_ERROR_UNLIKELY);
+		return (LOGE("Start condition could not be sent"), I2C_ERROR_UNLIKELY);
 
 	LOGD("Start condition was sent !");
 
@@ -69,6 +69,7 @@ int8_t	i2c_start(uint8_t address, uint8_t mode)
 
 		default:
 			LOGE("Unknown status code");
+			printHexa(TW_STATUS);
 	}
 	return (0);
 }
@@ -87,6 +88,10 @@ int8_t	i2c_write(uint8_t data)
 
 	switch (TWSR & 0b11111000)
 	{
+		case TW_MT_SLA_ACK:
+			LOGD("SLA ACK received while writing data, not supposed to happen !");
+			break;
+
 		case TW_MT_DATA_ACK:
 			LOGD("Data ACK received from slave device");
 			break;
@@ -100,7 +105,9 @@ int8_t	i2c_write(uint8_t data)
 			break;
 		
 		default:
-			return (LOGE("Unknown status code"), I2C_ERROR_UNLIKELY);
+			LOGE("Unknown status code");
+			printHexa(TW_STATUS);
+			return (I2C_ERROR_UNLIKELY);
 	}
 	return (0);
 }
@@ -147,7 +154,9 @@ int8_t	i2c_read(uint8_t* dest, uint8_t stop)
 			break;
 		
 		default:
-			return (error(), LOGE("Unknown status code"), I2C_ERROR_UNLIKELY);
+			LOGE("Unknown status code");
+			printHexa(TW_STATUS);
+			return (I2C_ERROR_UNLIKELY);
 	}
 
 	return (0);

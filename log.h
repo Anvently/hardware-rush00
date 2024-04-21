@@ -25,7 +25,7 @@
 #define LOG_DEBUG 3
 
 #ifndef LOG_LVL
-	#define LOG_LVL LOG_DEBUG
+	#define LOG_LVL LOG_INFO
 #endif
 
 #ifndef HEXCODE

@@ -18,6 +18,7 @@ FOR MASTER
 FOR SLAVE
 	- read data while 1
 		- send NACK if button not pressed
+			- then
 		- send ACK if button pressed
 		- if 2
 			go to countdown part

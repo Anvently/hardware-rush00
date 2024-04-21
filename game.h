@@ -27,6 +27,18 @@
 #define LOG_INFO 2
 #define LOG_DEBUG 3
 
+#define GAME_MODE_WAIT_MASTER 0
+#define GAME_MODE_WAIT_EVERYBODY 1
+#define GAME_MODE_COUNTDOWN 2
+#define GAME_MODE_PUSH 3
+#define GAME_MODE_WIN 4
+#define GAME_MODE_LOST 5
+
+#define INSTRUCTION_CHECK_PRESS 1
+#define INSTRUCTION_CHECK_NOT_PRESS 2
+#define INSTRUCTION_START_COUNTDOWN 3
+#define INSTRUCTION_LOSE 4
+
 #ifndef LOG_LVL
 	#define LOG_LVL LOG_INFO
 #endif
@@ -38,8 +50,8 @@ void	initMaster(void);
 void	initSlave(void);
 void	lose(void);
 void	masterRoutine(void);
-void	readButtons(void);
-void	setRole(void)
+uint8_t	readButtons(void);
+void	setRole(void);
 void	slaveRoutine(void);
 void	win(void);
 

@@ -47,6 +47,8 @@ $(TARGET): bin
 flash: $(TARGET)
 	-killall screen
 	avrdude -c arduino -P $(PORT) -b $(BAUDRATE) -p atmega328p -D -U flash:w:$(TARGET):i
+	-avrdude -c arduino -P $(PORT:USB0=USB1) -b $(BAUDRATE) -p atmega328p -D -U flash:w:$(TARGET):i
+	-avrdude -c arduino -P $(PORT:USB0=USB2) -b $(BAUDRATE) -p atmega328p -D -U flash:w:$(TARGET):i
 
 clean:
 	@echo "\n-------------CLEAN--------------\n"
