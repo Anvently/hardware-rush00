@@ -25,18 +25,21 @@ Different modes
 static uint8_t	mode =	 I2C_MODE_MASTER;
 static uint8_t	gameMode = GAME_MODE_WAIT_MASTER;
 static volatile uint8_t	isPressed = FALSE;
+static uint8_t	hasCheat = FALSE;
 
 #define BTN1_IS_PRESSED ((PIND & (1 << PD2)) == 0)
 #define BTN2_IS_PRESSED ((PIND & (1 << PD4)) == 0)
 
 uint8_t	readButtons(void)
 {
-	if (BTN1_IS_PRESSED)
-		isPressed = TRUE;
-	// if (BTN1_IS_PRESSED && isPressed == FALSE) //if button is pressed for the first time
+	// if (BTN1_IS_PRESSED)
 	// 	isPressed = TRUE;
-	// else if (BTN1_IS_PRESSED == FALSE) //If state changes
-	// 	isPressed = FALSE;
+	if (BTN1_IS_PRESSED && isPressed == FALSE) //if button is pressed for the first time
+		isPressed = TRUE;
+	else if (isPressed)
+		isPressed = FALSE;
+	else if (BTN1_IS_PRESSED == FALSE) //If state changes
+		isPressed = FALSE;
 	return (isPressed);
 }
 
@@ -92,7 +95,9 @@ void	waitEverybodyMaster(void)
 		else if (TW_STATUS == TW_MT_DATA_NACK) //All slave are ready
 		{
 			LOGI("All slaves are ready");
+			TWCR = 0;
 			initMaster(); //resend GCALL SLA
+			LOGI("Master is going to countdown");
 			// while (TW_STATUS != TW_MT_SLA_ACK); //wait for slave to receive SLA GCE
 			// i2c_write(INSTRUCTION_START_COUNTDOWN);
 			switchMode(GAME_MODE_COUNTDOWN);
@@ -115,7 +120,7 @@ void	waitEverybodySlave(void)
 		}
 		if (data == INSTRUCTION_START_COUNTDOWN)
 		{
-			if (isPressed == FALSE)
+			if (readButtons() == FALSE)
 				LOGE("Slave was ordered to go to countdown while button not pressed");
 			LOGI("Everybody is ready !");
 			switchMode(GAME_MODE_COUNTDOWN);
@@ -154,8 +159,14 @@ void	initGame(void)
 	setRole(); //Will block until a master take the lead
 	LOGI("Waiting for everybody to be ready");
 	waitEverybody();
-	isPressed = FALSE;
+	// isPressed = FALSE;
+	readButtons();
 	countdown();
+	if (hasCheat == TRUE)
+	{
+		switchMode(GAME_MODE_LOST);
+		lose();
+	}
 	switchMode(GAME_MODE_PUSH);
 	if (mode == I2C_MODE_MASTER)
 	{
@@ -228,11 +239,19 @@ void	initSlave(void)
 void	masterRoutine(void)
 {
 	uint8_t	data = 0;
+	if (TW_STATUS != TW_MT_SLA_ACK)
+	{
+		switchMode(GAME_MODE_WIN);
+		win();
+		i2c_stop();
+		return ;
+	}
 	while (1)
 	{
 		if (readButtons())
 		{
 			i2c_write(INSTRUCTION_LOSE);
+			LOGI("loose send");
 			switchMode(GAME_MODE_WIN);
 			win();
 			break ; 
@@ -241,10 +260,10 @@ void	masterRoutine(void)
 		if (TW_STATUS == TW_MT_DATA_ACK) //If a slave has won
 		{
 			LOGI("A slave has won");
-			TWCR = 0;
-			initMaster(); //resend GCALL SLA
-			i2c_write(INSTRUCTION_LOSE);
-			LOGI("Master has sent instruction lose");
+			// TWCR = 0;
+			// initMaster(); //resend GCALL SLA
+			// i2c_write(INSTRUCTION_LOSE);
+			// LOGI("Master has sent instruction lose");
 			// while (TW_STATUS != TW_MT_SLA_ACK)
 			// {
 			// 	printHexa(TW_STATUS);
@@ -272,28 +291,28 @@ void	slaveRoutine(void)
 	{
 		readButtons();
 		uint8_t	data = 0;
-		i2c_read(&data, hasWon ? hasWon : !isPressed); //if pressed return ACK
-														  //if already won return NACK
+		i2c_read(&data, !readButtons()); //if pressed return ACK
+											//if already won return NACK
 		if (TW_STATUS == TW_SR_GCALL_DATA_ACK) //ACK has been returned
 		{
-			LOGI("hasWon set to true");
 			hasWon = TRUE;
+			break;
 		}
-		else if (TW_SR_GCALL_DATA_NACK && hasWon == TRUE) //If has won and returned NACK
-														  //Need to end the game
-		{
-			LOGI("Last communication ?");
-		}
+		// else if (TW_SR_GCALL_DATA_NACK && hasWon == TRUE) //If has won and returned NACK
+		// 												  //Need to end the game
+		// {
+		// 	LOGI("Last communication ?");
+		// }
 		if (data == INSTRUCTION_LOSE)
 		{
 			LOGI("Slave received instruction lose");
 			break;
 		}
 		// initSlave(); //reset
-		TWCR = 0;
+		// TWCR = 0;
 		TWCR = (1 << TWEA) | (1 << TWEN) | (1 << TWINT); //reset connexion
 		// while (!I2C_READY && TW_STATUS != TW_SR_GCALL_ACK);
-		// while (!I2C_READY);
+		while (!I2C_READY);
 	}
 	if (hasWon)
 	{
@@ -310,19 +329,36 @@ void	slaveRoutine(void)
 ///////////////////////////////////////////////////////////////////
 // LED
 
+uint8_t	delayCheck(double d)
+{
+	uint8_t	cheat = FALSE;
+
+	for (double i = 0; i < d; i++)
+	{
+		if (readButtons() == TRUE)
+			cheat = TRUE;
+		_delay_ms(1);
+	} 
+	return (cheat);
+}
+
 void	countdown(void)
 {
 	DDRB |= (1 <<PB0) | (1 <<PB1) | (1 <<PB2) | (1 <<PB4);
 	PORTB |= (1 <<PB0) | (1 <<PB1) | (1 <<PB2) | (1 <<PB4);
-
-	_delay_ms(1000);
+	
+	if (delayCheck(1000))
+		hasCheat = TRUE;
 	PORTB &= ~(1 <<PB4);
-	// _delay_ms(1000);
-	// PORTB &= ~(1 <<PB2);
-	// _delay_ms(1000);
-	// PORTB &= ~(1 <<PB1);
-	// _delay_ms(1000);
-	// PORTB &= ~(1 <<PB0);
+	if (delayCheck(1000))
+		hasCheat = TRUE;
+	PORTB &= ~(1 <<PB2);
+	if (delayCheck(1000))
+		hasCheat = TRUE;
+	PORTB &= ~(1 <<PB1);
+	if (delayCheck(1000))
+		hasCheat = TRUE;
+	PORTB &= ~(1 <<PB0);
 }
 
 void	win(void)
