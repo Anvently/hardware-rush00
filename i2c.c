@@ -86,7 +86,7 @@ int8_t	i2c_write(uint8_t data)
 
 	while (!I2C_READY);
 
-	switch (TWSR & 0b11111000)
+	switch (TW_STATUS)
 	{
 		case TW_MT_SLA_ACK:
 			LOGD("SLA ACK received while writing data, not supposed to happen !");

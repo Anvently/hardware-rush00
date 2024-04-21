@@ -81,119 +81,38 @@ void	switchMode(uint8_t newMode)
 
 #define MAX_VALUE 10000
 
-// void	waitEverybodyMaster(void)
-// {
-// 	static uint8_t	receivedACK = FALSE;
-// 	while (1)
-// 	{	
-// 		i2c_write(INSTRUCTION_CHECK_PRESS);
-// 		printHexa(TW_STATUS);
-// 		if (TW_STATUS == TW_MT_DATA_ACK)
-// 		{
-// 			i2c_write(INSTRUCTION_CHECK_NOT_PRESS);
-// 			if (TW_STATUS == TW_MT_DATA_ACK) //It means a slave is telling he didn't press
-// 			{
-// 				while (TW_STATUS == TW_MT_DATA_ACK) //keep asking if a child didn't pressed
-// 													//the button
-// 					i2c_write(INSTRUCTION_CHECK_NOT_PRESS);
-// 			}
-// 			else if (TW_STATUS == TW_MT_DATA_NACK)//that mean all the slave pressed the button
-// 			{
-// 				TWCR = 0;
-// 				initMaster(); //resend GCALL SLA
-// 				while (TW_STATUS != TW_MT_SLA_ACK); //wait for sla
-// 				i2c_write(INSTRUCTION_START_COUNTDOWN);
-// 				LOGI("All slaves are ready");
-// 				switchMode(GAME_MODE_COUNTDOWN);
-// 				break;
-// 			}
-// 			else
-// 				LOGE("Unexpected status code");
-// 		}
-// 		else if (TW_STATUS == TW_MT_DATA_NACK) //A slave is not ready
-// 		{
-// 			TWCR = 0;
-// 			initMaster(); //resend GCALL SLA
-// 			while (TW_STATUS != TW_MT_SLA_ACK); //wait for sla
-// 		}
-// 	}
-// }
-
 void	waitEverybodyMaster(void)
 {
-	static uint8_t	receivedACK = FALSE;
 	while (1)
 	{	
 		i2c_write(INSTRUCTION_CHECK_PRESS);
 		// printHexa(TW_STATUS);
-		if (TW_STATUS == TW_MT_DATA_ACK)
+		if (TW_STATUS == TW_MT_DATA_ACK) //If a slave is not ready
+			continue ;
+		else if (TW_STATUS == TW_MT_DATA_NACK) //All slave are ready
 		{
 			LOGI("All slaves are ready");
-			switchMode(GAME_MODE_COUNTDOWN);
-			i2c_write(2);	
-			break;
-		}
-		else if (TW_STATUS == TW_MT_DATA_NACK) //A slave is not ready
-		{
-			TWCR = 0;
 			initMaster(); //resend GCALL SLA
-			while (TW_STATUS != TW_MT_SLA_ACK); //wait for sla
+			// while (TW_STATUS != TW_MT_SLA_ACK); //wait for slave to receive SLA GCE
+			// i2c_write(INSTRUCTION_START_COUNTDOWN);
+			switchMode(GAME_MODE_COUNTDOWN);
+			break;
 		}
 	}
 }
 
-// void	waitEverybodySlave(void)
-// {
-// 	uint8_t	data = 0;
-// 	uint8_t	otherPressed = FALSE;
-// 	uint8_t	returnNACK = FALSE;
-// 	while (1)
-// 	{
-// 		// if (readButtons() == FALSE)
-// 		// 	LOGI("sending NACK");
-// 		// else
-// 		// 	LOGI("sending ACK");
-// 		if ((otherPressed == FALSE && readButtons() == FALSE)
-// 		)
-
-// 		i2c_read(&data, returnNACK); //send ACK if button pressed else send NACK
-// 		if (data == INSTRUCTION_START_COUNTDOWN)
-// 		{
-// 			if (isPressed == FALSE)
-// 				LOGE("Slave was ordered to go to countdown while button not pressed");
-// 			LOGI("Everybody is ready !");
-// 			switchMode(GAME_MODE_COUNTDOWN);
-// 			break;
-// 		}
-// 		else if (TW_STATUS == TW_SR_GCALL_DATA_NACK) //If returned not pressed
-// 		{
-// 			//Make the slave return to SLA recognition mode 
-// 			TWCR = (1 << TWEA) | (1 << TWEN) | (1 << TWINT);
-// 			while (!I2C_READY);
-// 			if (TW_STATUS == TW_SR_GCALL_ACK) // if answered
-// 			{
-// 				data = 0;
-// 				continue;
-// 			}
-// 			else
-// 			{
-// 				LOGE("Slave received unexpected status");
-// 				printHexa(TW_STATUS);
-// 			}
-// 		}
-// 	}
-// }
-
 void	waitEverybodySlave(void)
 {
 	uint8_t	data = 0;
+	uint8_t	wasPressed = FALSE;
 	while (1)
 	{
-		if (readButtons() == FALSE)
-			LOGI("sending NACK");
-		else
-			LOGI("sending ACK");
-		i2c_read(&data, !readButtons()); //send ACK if button pressed else send NACK
+		i2c_read(&data, readButtons()); //send NACK if button pressed else send ACK
+		if (readButtons() && wasPressed == FALSE)
+		{
+			LOGI("Button was pressed, disconnected from bus and waiting for start condition");
+			wasPressed = TRUE;
+		}
 		if (data == INSTRUCTION_START_COUNTDOWN)
 		{
 			if (isPressed == FALSE)
@@ -202,21 +121,14 @@ void	waitEverybodySlave(void)
 			switchMode(GAME_MODE_COUNTDOWN);
 			break;
 		}
-		else if (TW_STATUS == TW_SR_GCALL_DATA_NACK) //If returned not pressed
+		else if (TW_STATUS == TW_SR_GCALL_DATA_NACK) //Everybody has pressed => line is free
 		{
 			//Make the slave return to SLA recognition mode 
 			TWCR = (1 << TWEA) | (1 << TWEN) | (1 << TWINT);
-			while (!I2C_READY);
-			if (TW_STATUS == TW_SR_GCALL_ACK) // if answered
-			{
-				data = 0;
-				continue;
-			}
-			else
-			{
-				LOGE("Slave received unexpected status");
-				printHexa(TW_STATUS);
-			}
+			while (!I2C_READY && TW_STATUS != TW_SR_GCALL_ACK);
+			LOGI("Everybody is ready !");
+			switchMode(GAME_MODE_COUNTDOWN);
+			break;
 		}
 	}
 }
@@ -267,8 +179,7 @@ void	setRole(void)
 	// Wait for button Pressed if master
 	while (1)
 	{
-		readButtons();
-		if (isPressed)
+		if (readButtons())
 		{
 			mode = I2C_MODE_MASTER;
 			LOGI("Switching to master");
@@ -288,7 +199,6 @@ void	setRole(void)
 
 void	initMaster(void)
 {
-										
 	i2c_init(100000, 0, I2C_MODE_MASTER_TX); //Init TWI interface enabling general call recognition
 					//    and master mode (not pulling TWEA at beginning)
 
@@ -320,22 +230,36 @@ void	masterRoutine(void)
 	uint8_t	data = 0;
 	while (1)
 	{
-		readButtons();
-		i2c_write(INSTRUCTION_CHECK_PRESS);
-		if (TW_STATUS == TW_MT_DATA_NACK)
-		{
-			switchMode(GAME_MODE_LOST);
-			lose();
-			i2c_write(INSTRUCTION_LOSE);
-			break ; 
-		}
-		else if (isPressed)
+		if (readButtons())
 		{
 			i2c_write(INSTRUCTION_LOSE);
 			switchMode(GAME_MODE_WIN);
 			win();
 			break ; 
 		}
+		i2c_write(INSTRUCTION_CHECK_PRESS);
+		if (TW_STATUS == TW_MT_DATA_ACK) //If a slave has won
+		{
+			LOGI("A slave has won");
+			TWCR = 0;
+			initMaster(); //resend GCALL SLA
+			i2c_write(INSTRUCTION_LOSE);
+			LOGI("Master has sent instruction lose");
+			// while (TW_STATUS != TW_MT_SLA_ACK)
+			// {
+			// 	printHexa(TW_STATUS);
+			// } //wait for slave to receive SLA GCE
+			// LOGI("sla ackreceived");
+			
+			switchMode(GAME_MODE_LOST);
+			lose();
+			break ; 
+		}
+		else if (TW_STATUS != TW_MT_DATA_NACK)
+			LOGE("unexpected");
+		TWCR = 0;
+		initMaster(); //resend GCALL SLA
+		while (TW_STATUS != TW_MT_SLA_ACK); //wait for slave to receive SLA GCE
 	}
 	_delay_ms(1); //MAybe to make sure everybody has treated information ???
 	i2c_stop();
@@ -343,23 +267,43 @@ void	masterRoutine(void)
 
 void	slaveRoutine(void)
 {
+	uint8_t	hasWon = FALSE;
 	while (1)
 	{
 		readButtons();
 		uint8_t	data = 0;
-		i2c_read(&data, isPressed);
-		if (isPressed)
+		i2c_read(&data, hasWon ? hasWon : !isPressed); //if pressed return ACK
+														  //if already won return NACK
+		if (TW_STATUS == TW_SR_GCALL_DATA_ACK) //ACK has been returned
 		{
-			switchMode(GAME_MODE_WIN);
-			win();
-			break;
+			LOGI("hasWon set to true");
+			hasWon = TRUE;
+		}
+		else if (TW_SR_GCALL_DATA_NACK && hasWon == TRUE) //If has won and returned NACK
+														  //Need to end the game
+		{
+			LOGI("Last communication ?");
 		}
 		if (data == INSTRUCTION_LOSE)
 		{
-			switchMode(GAME_MODE_LOST);
-			lose();
+			LOGI("Slave received instruction lose");
 			break;
 		}
+		// initSlave(); //reset
+		TWCR = 0;
+		TWCR = (1 << TWEA) | (1 << TWEN) | (1 << TWINT); //reset connexion
+		// while (!I2C_READY && TW_STATUS != TW_SR_GCALL_ACK);
+		// while (!I2C_READY);
+	}
+	if (hasWon)
+	{
+		switchMode(GAME_MODE_WIN);
+		win();
+	}
+	else
+	{
+		switchMode(GAME_MODE_LOST);
+		lose();
 	}
 }
 
@@ -373,12 +317,12 @@ void	countdown(void)
 
 	_delay_ms(1000);
 	PORTB &= ~(1 <<PB4);
-	_delay_ms(1000);
-	PORTB &= ~(1 <<PB2);
-	_delay_ms(1000);
-	PORTB &= ~(1 <<PB1);
-	_delay_ms(1000);
-	PORTB &= ~(1 <<PB0);
+	// _delay_ms(1000);
+	// PORTB &= ~(1 <<PB2);
+	// _delay_ms(1000);
+	// PORTB &= ~(1 <<PB1);
+	// _delay_ms(1000);
+	// PORTB &= ~(1 <<PB0);
 }
 
 void	win(void)
