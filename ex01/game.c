@@ -1,5 +1,5 @@
 #include <game.h>
-
+#include <stdlib.h>
 /*
 
 Different modes 
@@ -238,7 +238,7 @@ void	waitEverybody(void)
 ///////////////////////////////////////////////////////////////////
 // ROUTINES
 
-void	masterLaunchGame(void)
+void	masterLaunchGame()
 {
 	uint16_t time = 0;
 
@@ -269,7 +269,7 @@ void	masterLaunchGame(void)
 	}
 }
 
-void	masterRoutine(void)
+void	masterRoutine()
 {
 	uint8_t	data = 0;
 	masterLaunchGame();
@@ -306,9 +306,39 @@ void	masterRoutine(void)
 	i2c_stop();
 }
 
+void	arbit(void)
+{
+	i2c_init(100000, 0, I2C_MODE_MASTER_TX); //Init TWI interface enabling general call recognition
+					//    and master mode (not pulling TWEA at beginning)
+
+	TWCR = (1 << TWSTA) | (1 << TWINT) | (1 << TWEN); //send start condition
+	uint16_t	time = 0;
+	while (!I2C_READY)
+	{
+		if (time++ >= CHEAT_TIMEOUT)
+		{
+			LOGI("Could no send start condition, staying slave");
+			TWCR = 0;
+			initSlave();
+			return;
+		}
+	}
+	mode = I2C_MODE_MASTER;
+
+	if (!(TW_STATUS & TW_START) && !(TW_STATUS & TW_REP_START))
+		LOGE("Start condition could not be sent");
+	LOGD("Start condition was sent !");
+
+	TWDR = 0; //Set address of receiver and mode
+	TWCR = (1 << TWINT) | (1 << TWEN); //Set the interrupt flag to send content of TWDR buffer
+
+	LOGI("Switching to master");
+}
+
 void	slaveLaunchGame(void)
 {
 	uint16_t time = 0;
+	uint8_t	alreadyChecked = 0;
 
 	readButtons();
 	TWCR = 0;
@@ -323,10 +353,19 @@ void	slaveLaunchGame(void)
 	{
 		if (time++ >= CHEAT_TIMEOUT) //If master is not pinging, then he probably cheated
 		{
-			TWCR = 0;
-			switchMode(GAME_MODE_WIN);
-			LOGI("You win");
-			win();
+			if (alreadyChecked)
+				break;
+			//Try yo go to master to see if there is another slave
+			arbit();
+			if (mode == I2C_MODE_MASTER)
+				masterRoutine();
+			else
+			{
+				LOGI("stayed slave");
+				alreadyChecked = TRUE;
+				time = 0;
+				continue;
+			}
 			break;
 		}
 		TWCR = (1 << TWEA) | (1 << TWINT) | (1 << TWEN); //Enable interface and set TWEA to high

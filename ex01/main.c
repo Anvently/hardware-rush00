@@ -10,6 +10,7 @@
 #include <i2c.h>
 #include <stdlib.h>
 #include <game.h>
+#include <time.h>
 
 #ifndef CPU_FREQ
  #define CPU_FREQ 16000000
@@ -32,7 +33,10 @@ int	main(void)
 	DDRD |= (1 << PD5) | (1 << PD6) | (1 << PD3); //for RDB leds
 	LOGI("Reset");
 	while (1)
+	{
+		srand(time(NULL));
 		initGame();
+	}
 
 	while (1);
 }
