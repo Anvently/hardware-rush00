@@ -248,6 +248,7 @@ void	masterLaunchGame()
 	{
 		switchMode(GAME_MODE_LOST);
 		lose();
+		while (TW_STATUS != TW_MT_SLA_ACK);
 		return;
 	}
 	i2c_start(0, I2C_MODE_MASTER_TX);
