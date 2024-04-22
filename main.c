@@ -30,8 +30,9 @@
 int	main(void)
 {
 	DDRD |= (1 << PD5) | (1 << PD6) | (1 << PD3); //for RDB leds
-	LOGI("Starting");
-	initGame();
+	LOGI("Reset");
+	while (1)
+		initGame();
 	// detectMode();
 
 	while (1);

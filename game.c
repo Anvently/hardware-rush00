@@ -22,7 +22,7 @@ Different modes
 		- if a MASTER interrupt its connexion (game) how to detect it ??
 */
 
-#define CHEAT_TIMEOUT 100
+#define CHEAT_TIMEOUT 500U
 
 static uint8_t	mode =	 I2C_MODE_MASTER;
 static uint8_t	gameMode = GAME_MODE_WAIT_MASTER;
@@ -48,50 +48,54 @@ void	readButtons(void)
 
 void	switchMode(uint8_t newMode)
 {
+	PORTD &= ~((1 << PD5) | (1 << PD6) | (1 << PD3)); //turn off leds
 	switch (newMode)
 	{
 		case GAME_MODE_COUNTDOWN:
 			break;
-
-		PORTD &= ~((1 << PD5) | (1 << PD6) | (1 << PD3)); //turn off blue leds
-
+	
 		case GAME_MODE_WAIT_MASTER:
-			PORTD |= (1 << PD6) | (1 << PD3); //turn on red and green led => yellow
+			PORTD |= (1 << PD5) | (1 << PD6); //turn on red and green led => yellow
 			//may want to blink led
 			break;
 
 		case GAME_MODE_WAIT_EVERYBODY:
 			if (mode == I2C_MODE_MASTER)
-				PORTD |= (1 << PD5); //turn on blue led
+				PORTD |= (1 << PD3) | (1 << PD6); //turn on blue and green led
 			else
-				PORTD |= (1 << PD6) | (1 << PD3); //turn on red and green led => yellow
+				PORTD |= (1 << PD3); //turn on blue led
 			break;
 
 		case GAME_MODE_PUSH:
-		
+			PORTD |= (1 << PD3); //turn on blue led
 			break;
 
 		case GAME_MODE_WIN:
-			PORTD |= (1 << PD6);
+			PORTD |= (1 << PD6); //Turn on green led
 			break;
 
 		case GAME_MODE_LOST:
-			PORTD |= (1 << PD3);
+			PORTD |= (1 << PD5); //turn on red led
 			break;
 		
 		default:
 			break;
 	}
-	gameMode = mode;
+	gameMode = newMode;
 }
 
 void	initGame(void)
 {
+	readButtons();
+	LOGI("Starting");
 	switchMode(GAME_MODE_WAIT_MASTER);
+	mode = I2C_MODE_SLAVE;
 	isReady = FALSE;
 	pressedEvent = FALSE;
+	hasCheat = FALSE;
+	TWCR = (1 << TWINT);
 	initSlave();
-	setRole(); //Will block until a master take the lead
+	setRole();
 	LOGI("Waiting for everybody to be ready");
 	waitEverybody();
 	readButtons();
@@ -99,23 +103,13 @@ void	initGame(void)
 		pressedEvent = FALSE;
 	countdown();
 	if (hasCheat == TRUE)
-	{
-		TWCR = 0;
-		switchMode(GAME_MODE_LOST);
-		lose();
-		return;
-	}
+		LOGI("You have cheated !");
 	switchMode(GAME_MODE_PUSH);
 	if (mode == I2C_MODE_MASTER)
-	{
-		LOGI("Starting game as master");
 		masterRoutine();
-	}
 	else
-	{
-		LOGI("Starting game as slave");
 		slaveRoutine();
-	}
+	
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -248,24 +242,44 @@ void	waitEverybody(void)
 ///////////////////////////////////////////////////////////////////
 // ROUTINES
 
-void	masterRoutine(void)
+void	masterLaunchGame(void)
 {
-	uint8_t	data = 0, time = 0;
+	uint16_t time = 0;
 
+	TWCR = 0;
+	i2c_stop();
+	if (hasCheat)
+	{
+		switchMode(GAME_MODE_LOST);
+		lose();
+		return;
+	}
+	i2c_start(0, I2C_MODE_MASTER_TX);
 	while (TW_STATUS != TW_MT_SLA_ACK) //NEED A TIMEOUT
 	{
-		if (time++ > CHEAT_TIMEOUT)
+		if (time++ >= CHEAT_TIMEOUT)
 			break;
-		TWCR = 0;
-		initMaster(); //Restart master
+		i2c_start(0, I2C_MODE_MASTER_TX);
+		// TWCR = 0;
+		// initMaster(); //Restart master
+		_delay_ms(1);
 	}
-	if (TW_STATUS != TW_MT_SLA_ACK) //If no slave has answere, then we won
+	if (TW_STATUS == TW_MT_SLA_NACK) //If no slave has answere, then we won
 	{
 		switchMode(GAME_MODE_WIN);
 		win();
 		i2c_stop();
 		return ;
 	}
+}
+
+void	masterRoutine(void)
+{
+	uint8_t	data = 0;
+	masterLaunchGame();
+	if (gameMode != GAME_MODE_PUSH || hasCheat)
+		return;
+	LOGI("Starting game as master");
 	while (1)
 	{
 		readButtons();
@@ -296,20 +310,44 @@ void	masterRoutine(void)
 	i2c_stop();
 }
 
-void	slaveRoutine(void)
+void	slaveLaunchGame(void)
 {
-	uint8_t	data = 0, hasWon = FALSE, time = 0;
+	uint16_t time = 0;
 
 	readButtons();
+	TWCR = 0;
+	if (hasCheat)
+	{
+		switchMode(GAME_MODE_LOST);
+		lose();
+		return;
+	}
+	initSlave();
 	while (TW_STATUS != TW_SR_GCALL_ACK) //Wait for the master to ping the slave
 	{
 		if (time++ >= CHEAT_TIMEOUT) //If master is not pinging, then he probably cheated
-			hasWon = TRUE;
-		printHexa(TW_STATUS);
-		TWCR = 0;
-		initSlave();
+		{
+			TWCR = 0;
+			switchMode(GAME_MODE_WIN);
+			LOGI("You win");
+			win();
+			break;
+		}
+		TWCR = (1 << TWEA) | (1 << TWINT) | (1 << TWEN); //Enable interface and set TWEA to high
+		_delay_ms(1);
 	}
-	while (hasWon == FALSE)
+}
+
+void	slaveRoutine(void)
+{
+	uint8_t		data = 0;
+	uint8_t		hasWon = FALSE;
+
+	slaveLaunchGame();
+	if (gameMode != GAME_MODE_PUSH || hasCheat)
+		return;
+	LOGI("Starting game as slave");
+	while (1)
 	{
 		readButtons();
 		i2c_read(&data, !pressedEvent); //if pressed return ACK
@@ -383,8 +421,6 @@ void	win(void)
 {
 	print("Victory !! :-D", 1);
 
-	DDRD |= (1<<PD3) | (1<<PD5) | (1<<PD6);
-
 	for (int i = 0; i < 15; i++)
 	{
 		PORTD |= (1<<PD3);
@@ -404,9 +440,5 @@ void	win(void)
 void	lose(void)
 {
 	print("LOOSER :-(", 1);
-
 	_delay_ms(6000);
-
-	PORTD &= ~((1 << PD5) | (1 << PD6) | (1 << PD3));
-	
 }
