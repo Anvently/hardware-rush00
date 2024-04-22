@@ -197,7 +197,7 @@ void	waitEverybodySlave(void)
 	while (1)
 	{
 		readButtons();
-		i2c_read(&data, pressedEvent); //send NACK if button pressed else send ACK
+		i2c_read(&data, isReady); //send NACK if button pressed else send ACK
 		if (pressedEvent) //slave should have return NACK
 		{
 			LOGI("Button was pressed, disconnected from bus and waiting for start condition");
@@ -205,6 +205,7 @@ void	waitEverybodySlave(void)
 			isReady = TRUE;
 			//Wait for GCALL ?
 		}
+		// printHexa(TW_STATUS);
 		if (data == INSTRUCTION_START_COUNTDOWN)
 		{
 			if (isReady == FALSE)
@@ -215,6 +216,7 @@ void	waitEverybodySlave(void)
 		}
 		else if (TW_STATUS == TW_SR_GCALL_DATA_NACK) //Everybody has pressed => line is free
 		{
+			LOGI("PING");
 			//Make the slave return to SLA recognition mode 
 			TWCR = (1 << TWEA) | (1 << TWEN) | (1 << TWINT);
 			while (!I2C_READY && TW_STATUS != TW_SR_GCALL_ACK);
@@ -351,10 +353,16 @@ void	slaveRoutine(void)
 	{
 		readButtons();
 		i2c_read(&data, !pressedEvent); //if pressed return ACK
-		if (TW_STATUS == TW_SR_GCALL_DATA_ACK) //ACK has been returned
+		if (TW_STATUS == TW_SR_GCALL_DATA_ACK && (pressedEvent)) //ACK has been returned
 		{
 			hasWon = TRUE;
 			pressedEvent = FALSE;
+			TWCR = (1 << TWINT);
+			break;
+		}
+		else if (TW_STATUS == TW_SR_GCALL_DATA_ACK && !pressedEvent)
+		{
+			LOGI("Other slave has won");
 			break;
 		}
 		if (data == INSTRUCTION_LOSE)
