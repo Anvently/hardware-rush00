@@ -50,10 +50,11 @@ void	initMaster(void);
 void	initSlave(void);
 void	lose(void);
 void	masterRoutine(void);
-uint8_t	readButtons(void);
+void	readButtons(void);
 void	setRole(void);
 void	slaveRoutine(void);
 void	win(void);
 
+void	waitEverybody(void);
 
 #endif
